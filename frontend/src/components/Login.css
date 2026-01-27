@@ -8,26 +8,29 @@
 }
 
 .login-card {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 2.5rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 40px var(--shadow);
   width: 100%;
   max-width: 400px;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-card h2 {
   margin: 0 0 0.5rem 0;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-size: 2rem;
   text-align: center;
+  transition: color 0.3s ease;
 }
 
 .login-subtitle {
   text-align: center;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   margin-bottom: 2rem;
   font-size: 0.95rem;
+  transition: color 0.3s ease;
 }
 
 .login-form {
@@ -43,17 +46,20 @@
 }
 
 .form-group label {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 500;
   font-size: 0.9rem;
+  transition: color 0.3s ease;
 }
 
 .form-group input {
   padding: 0.75rem;
-  border: 2px solid #e0e0e0;
+  border: 2px solid var(--border-color);
   border-radius: 6px;
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
 }
 
 .form-group input:focus {
@@ -61,13 +67,18 @@
   border-color: #667eea;
 }
 
+.form-group input::placeholder {
+  color: var(--text-secondary);
+}
+
 .error-message {
-  background-color: #fee;
-  color: #c33;
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
   padding: 0.75rem;
   border-radius: 6px;
   text-align: center;
   font-size: 0.9rem;
+  border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
 .login-button {
@@ -99,9 +110,10 @@
 .login-note {
   margin-top: 1.5rem;
   text-align: center;
-  color: #95a5a6;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   font-style: italic;
+  transition: color 0.3s ease;
 }
 
 .link-button {

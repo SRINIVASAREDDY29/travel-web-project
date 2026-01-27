@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../utils/api';
+import { authAPI, profileAPI } from '../utils/api';
 import './Login.css';
 
 function Login({ onLogin }) {
@@ -42,7 +42,25 @@ function Login({ onLogin }) {
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('isAuthenticated', 'true');
       
-      onLogin(response.user);
+      // Fetch complete profile data including profile photo
+      try {
+        const profileResponse = await profileAPI.getMe();
+        if (profileResponse.user) {
+          const completeUser = {
+            ...response.user,
+            ...profileResponse.user
+          };
+          localStorage.setItem('user', JSON.stringify(completeUser));
+          onLogin(completeUser);
+        } else {
+          onLogin(response.user);
+        }
+      } catch (profileError) {
+        // If profile fetch fails, use auth response
+        console.error('Error fetching profile:', profileError);
+        onLogin(response.user);
+      }
+      
       navigate('/');
     } catch (err) {
       console.error('Auth error:', err);

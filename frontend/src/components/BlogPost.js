@@ -1,7 +1,7 @@
 import React from 'react';
 import './BlogPost.css';
 
-function BlogPost({ blog }) {
+function BlogPost({ blog, onDelete, showDelete }) {
   const getMediaUrl = () => {
     let mediaUrl = blog.mediaUrl;
     if (!mediaUrl) return null;
@@ -37,8 +37,29 @@ function BlogPost({ blog }) {
     return null;
   };
 
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!onDelete) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this post? This action cannot be undone.');
+    if (confirmed) {
+      onDelete(blog._id || blog.id);
+    }
+  };
+
   return (
     <div className="blog-post">
+      {showDelete && onDelete && (
+        <button 
+          className="blog-delete-button" 
+          onClick={handleDelete}
+          aria-label="Delete post"
+          title="Delete this post"
+        >
+          ×
+        </button>
+      )}
       {renderMedia()}
       <div className="blog-content">
         {blog.description && (

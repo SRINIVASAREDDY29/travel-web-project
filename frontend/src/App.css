@@ -2,10 +2,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f6fa;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .main-content {
   flex: 1;
   padding-top: 0;
+  background-color: var(--bg-primary);
 }

@@ -147,3 +147,34 @@ export const postsAPI = {
     return handleResponse(response);
   }
 };
+
+// Profile API
+export const profileAPI = {
+  getMe: async () => {
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/profile/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      }
+    });
+    return handleResponse(response);
+  },
+
+  updatePhoto: async (file) => {
+    const formData = new FormData();
+    formData.append('profilePhoto', file);
+
+    const token = getToken();
+    const response = await fetch(`${API_BASE_URL}/profile/photo`, {
+      method: 'PUT',
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+        // Don't set Content-Type, let browser set it with boundary for FormData
+      },
+      body: formData
+    });
+    return handleResponse(response);
+  }
+};

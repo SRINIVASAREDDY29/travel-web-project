@@ -5,13 +5,41 @@ import Login from './components/Login';
 import Home from './components/Home';
 import Upload from './components/Upload';
 import Profile from './components/Profile';
+import { profileAPI } from './utils/api';
 import './App.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme || 'light';
+  });
+
+  const fetchUserProfile = async () => {
+    try {
+      const response = await profileAPI.getMe();
+      if (response.user) {
+        setUser(response.user);
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Don't show error to user, just use cached data
+    }
+  };
 
   useEffect(() => {
+    // Apply theme to document on mount and when theme changes
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    // Apply theme immediately on mount
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
     // Check if user is authenticated on app load
     const token = localStorage.getItem('token');
     const authStatus = localStorage.getItem('isAuthenticated');
@@ -19,13 +47,29 @@ function App() {
     
     if (token && authStatus === 'true' && userData) {
       setIsAuthenticated(true);
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      
+      // Fetch latest profile data including profile photo
+      fetchUserProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogin = (userData) => {
     setIsAuthenticated(true);
     setUser(userData);
+  };
+
+  const handleUserUpdate = (updatedUser) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      ...updatedUser
+    }));
+    localStorage.setItem('user', JSON.stringify({
+      ...user,
+      ...updatedUser
+    }));
   };
 
   const handleLogout = () => {
@@ -36,13 +80,19 @@ function App() {
     localStorage.removeItem('user');
   };
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
   return (
     <Router>
       <div className="App">
         <Navbar 
           isAuthenticated={isAuthenticated} 
           user={user} 
-          onLogout={handleLogout} 
+          onLogout={handleLogout}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
         <main className="main-content">
           <Routes>
@@ -61,7 +111,7 @@ function App() {
             <Route 
               path="/profile" 
               element={
-                isAuthenticated ? <Profile user={user} /> : <Navigate to="/login" replace />
+                isAuthenticated ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Navigate to="/login" replace />
               } 
             />
             <Route path="/" element={<Home user={user} isAuthenticated={isAuthenticated} />} />

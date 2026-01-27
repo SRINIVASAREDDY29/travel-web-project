@@ -1,14 +1,15 @@
 .blog-post {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 6px var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+  position: relative;
 }
 
 .blog-post:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 16px var(--shadow);
 }
 
 .blog-media {
@@ -23,11 +24,12 @@
 }
 
 .blog-description {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-size: 1rem;
   line-height: 1.6;
   margin: 0 0 1rem 0;
   word-wrap: break-word;
+  transition: color 0.3s ease;
 }
 
 .blog-meta {
@@ -35,8 +37,9 @@
   justify-content: space-between;
   align-items: center;
   padding-top: 1rem;
-  border-top: 1px solid #ecf0f1;
+  border-top: 1px solid var(--border-color);
   font-size: 0.85rem;
+  transition: border-color 0.3s ease;
 }
 
 .blog-author {
@@ -45,7 +48,39 @@
 }
 
 .blog-date {
-  color: #95a5a6;
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
+}
+
+.blog-delete-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.3s ease, transform 0.2s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.blog-delete-button:hover {
+  background: rgba(231, 76, 60, 1);
+  transform: scale(1.1);
+}
+
+.blog-delete-button:active {
+  transform: scale(0.95);
 }
 
 @media (max-width: 768px) {

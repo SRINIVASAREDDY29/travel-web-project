@@ -50,7 +50,8 @@ router.post('/register', [
       token,
       user: {
         id: user._id.toString(),
-        username: user.username
+        username: user.username,
+        profilePhoto: user.profilePhoto || null
       }
     });
   } catch (error) {
@@ -143,7 +144,8 @@ router.post('/login', [
       token,
       user: {
         id: user._id.toString(),
-        username: user.username
+        username: user.username,
+        profilePhoto: user.profilePhoto || null
       }
     });
   } catch (error) {
