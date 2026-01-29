@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BlogPost from './BlogPost';
+import PostExpandedOverlay from './PostExpandedOverlay';
 import { postsAPI, profileAPI } from '../utils/api';
 import './Profile.css';
 
@@ -11,6 +12,7 @@ function Profile({ user, onUserUpdate }) {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [expandedPost, setExpandedPost] = useState(null);
 
   useEffect(() => {
     if (user && user.id) {
@@ -206,14 +208,22 @@ function Profile({ user, onUserUpdate }) {
       ) : (
         <div className="blogs-grid">
           {blogs.map((blog) => (
-            <BlogPost 
-              key={blog._id || blog.id} 
-              blog={blog} 
+            <BlogPost
+              key={blog._id || blog.id}
+              blog={blog}
               onDelete={handleDeletePost}
               showDelete={true}
+              onClick={setExpandedPost}
             />
           ))}
         </div>
+      )}
+
+      {expandedPost && (
+        <PostExpandedOverlay
+          post={expandedPost}
+          onClose={() => setExpandedPost(null)}
+        />
       )}
     </div>
   );

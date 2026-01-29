@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import BlogPost from './BlogPost';
+import PostExpandedOverlay from './PostExpandedOverlay';
 import { postsAPI } from '../utils/api';
 import './Home.css';
 
@@ -7,6 +8,7 @@ function Home({ user, isAuthenticated }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [expandedPost, setExpandedPost] = useState(null);
 
   useEffect(() => {
     fetchBlogs();
@@ -54,9 +56,20 @@ function Home({ user, isAuthenticated }) {
       ) : (
         <div className="blogs-grid">
           {blogs.map((blog) => (
-            <BlogPost key={blog._id || blog.id} blog={blog} />
+            <BlogPost
+              key={blog._id || blog.id}
+              blog={blog}
+              onClick={setExpandedPost}
+            />
           ))}
         </div>
+      )}
+
+      {expandedPost && (
+        <PostExpandedOverlay
+          post={expandedPost}
+          onClose={() => setExpandedPost(null)}
+        />
       )}
     </div>
   );

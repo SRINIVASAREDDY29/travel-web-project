@@ -1,7 +1,7 @@
 import React from 'react';
 import './BlogPost.css';
 
-function BlogPost({ blog, onDelete, showDelete }) {
+function BlogPost({ blog, onDelete, showDelete, onClick, className = '' }) {
   const getMediaUrl = () => {
     let mediaUrl = blog.mediaUrl;
     if (!mediaUrl) return null;
@@ -48,8 +48,30 @@ function BlogPost({ blog, onDelete, showDelete }) {
     }
   };
 
+  const handleCardClick = (e) => {
+    if (onClick && !e.target.closest('.blog-delete-button')) {
+      onClick(blog);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick(blog);
+    }
+  };
+
+  const isClickable = Boolean(onClick);
+
   return (
-    <div className="blog-post">
+    <div
+      className={`blog-post ${isClickable ? 'clickable' : ''} ${className}`.trim()}
+      onClick={isClickable ? handleCardClick : undefined}
+      onKeyDown={isClickable ? handleKeyDown : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      aria-label={isClickable ? 'View full post' : undefined}
+    >
       {showDelete && onDelete && (
         <button 
           className="blog-delete-button" 
