@@ -28,6 +28,7 @@ function Navbar({ isAuthenticated, user, onLogout, theme, onToggleTheme }) {
           {isAuthenticated ? (
             <>
               <Link to="/" className="navbar-link">Home</Link>
+              <Link to="/chat" className="navbar-link">Chat</Link>
               <Link to="/profile" className="navbar-link">My Profile</Link>
               <Link to="/upload" className="navbar-link">Upload</Link>
               <span className="navbar-user">Welcome, {user?.username || 'User'}</span>

@@ -148,6 +148,54 @@ export const postsAPI = {
   }
 };
 
+// Users API
+export const usersAPI = {
+  search: async (query) => {
+    const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+};
+
+// Chat API
+export const chatAPI = {
+  getConversations: async () => {
+    const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  getMessages: async (userId, before = null) => {
+    let url = `${API_BASE_URL}/chat/messages/${userId}`;
+    if (before) url += `?before=${encodeURIComponent(before)}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  markAsRead: async (senderId) => {
+    const response = await fetch(`${API_BASE_URL}/chat/read/${senderId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+};
+
 // Profile API
 export const profileAPI = {
   getMe: async () => {

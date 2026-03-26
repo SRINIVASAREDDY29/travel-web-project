@@ -150,7 +150,21 @@ router.post('/login', [
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
+
+    // Database/connection issues
+    if (error.name === 'MongooseError' && error.message?.includes('buffering')) {
+      return res.status(503).json({
+        message: 'Database is connecting. Please try again in a few seconds.'
+      });
+    }
+    if (error.name === 'MongoNetworkError' || error.name === 'MongoTimeoutError' ||
+        error.message?.includes('connection') || error.message?.includes('timeout')) {
+      return res.status(503).json({
+        message: 'Database connection issue. Please try again.'
+      });
+    }
+
+    res.status(500).json({
       message: 'Server error during login'
     });
   }

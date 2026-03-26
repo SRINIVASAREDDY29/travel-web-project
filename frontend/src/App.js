@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Home from './components/Home';
 import Upload from './components/Upload';
 import Profile from './components/Profile';
+import Chat from './components/Chat';
 import { profileAPI } from './utils/api';
 import './App.css';
 
@@ -112,6 +113,12 @@ function App() {
               path="/profile" 
               element={
                 isAuthenticated ? <Profile user={user} onUserUpdate={handleUserUpdate} /> : <Navigate to="/login" replace />
+              } 
+            />
+            <Route 
+              path="/chat" 
+              element={
+                isAuthenticated ? <Chat user={user} /> : <Navigate to="/login" replace />
               } 
             />
             <Route path="/" element={<Home user={user} isAuthenticated={isAuthenticated} />} />
