@@ -37,8 +37,8 @@ function Login({ onLogin }) {
         ? await authAPI.register(formData.username, formData.password)
         : await authAPI.login(formData.username, formData.password);
 
-      // Store token and user data
       localStorage.setItem('token', response.token);
+      localStorage.setItem('refreshToken', response.refreshToken);
       localStorage.setItem('user', JSON.stringify(response.user));
       localStorage.setItem('isAuthenticated', 'true');
       

@@ -18,6 +18,10 @@ const userSchema = new mongoose.Schema({
   profilePhoto: {
     type: String,
     default: null
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

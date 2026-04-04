@@ -1,11 +1,14 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const SERVER_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
-// Helper function to get auth token from localStorage
-const getToken = () => {
-  return localStorage.getItem('token');
+const getToken = () => localStorage.getItem('token');
+
+export const getMediaUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http') || path.startsWith('blob:')) return path;
+  return `${SERVER_BASE_URL}${path}`;
 };
 
-// Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = getToken();
   return {
@@ -14,11 +17,12 @@ const getAuthHeaders = () => {
   };
 };
 
-// Helper function to handle API responses
+// --- Response handler ---
+
 const handleResponse = async (response) => {
   let data;
   const contentType = response.headers.get('content-type');
-  
+
   try {
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
@@ -32,9 +36,8 @@ const handleResponse = async (response) => {
     }
     throw parseError;
   }
-  
+
   if (!response.ok) {
-    // Handle validation errors with array
     if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
       const firstError = data.errors[0];
       const errorMessage = firstError.msg || firstError.message || data.message || 'Validation failed';
@@ -43,18 +46,73 @@ const handleResponse = async (response) => {
     const error = data.message || data.error || 'Something went wrong';
     throw new Error(error);
   }
-  
+
   return data;
 };
 
-// Auth API
+// --- Token refresh machinery ---
+
+let refreshPromise = null;
+
+export const refreshAccessToken = async () => {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) throw new Error('No refresh token');
+
+  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+
+  if (!response.ok) throw new Error('Token refresh failed');
+
+  const data = await response.json();
+  localStorage.setItem('token', data.token);
+  return data.token;
+};
+
+const forceLogout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('isAuthenticated');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+};
+
+const fetchWithAuth = async (url, options = {}) => {
+  let response = await fetch(url, options);
+
+  if (response.status !== 401 || url.includes('/auth/')) {
+    return handleResponse(response);
+  }
+
+  // Access token expired — try silent refresh
+  try {
+    if (!refreshPromise) {
+      refreshPromise = refreshAccessToken().finally(() => {
+        refreshPromise = null;
+      });
+    }
+    const newToken = await refreshPromise;
+
+    // Retry the original request with the fresh token
+    const retryHeaders = { ...(options.headers || {}) };
+    retryHeaders['Authorization'] = `Bearer ${newToken}`;
+    response = await fetch(url, { ...options, headers: retryHeaders });
+    return handleResponse(response);
+  } catch {
+    forceLogout();
+    throw new Error('Session expired. Please log in again.');
+  }
+};
+
+// --- API modules ---
+
 export const authAPI = {
   register: async (username, password) => {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     return handleResponse(response);
@@ -63,51 +121,54 @@ export const authAPI = {
   login: async (username, password) => {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
     return handleResponse(response);
+  },
+
+  logout: async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return;
+    try {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      });
+    } catch {
+      // Ignore — local cleanup still happens
+    }
   }
 };
 
-// Posts API
 export const postsAPI = {
-  getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+  getAll: async (page = 1, limit = 12) => {
+    return fetchWithAuth(`${API_BASE_URL}/posts?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${id}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   getByUserId: async (userId) => {
-    const response = await fetch(`${API_BASE_URL}/posts/user/${userId}`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts/user/${userId}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   getMyPosts: async () => {
-    const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/posts/my-posts`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts/my-posts`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      }
+      headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   create: async (file, mediaType, description) => {
@@ -119,95 +180,78 @@ export const postsAPI = {
     }
 
     const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/posts`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts`, {
       method: 'POST',
       headers: {
         ...(token && { 'Authorization': `Bearer ${token}` })
-        // Don't set Content-Type, let browser set it with boundary for FormData
       },
       body: formData
     });
-    return handleResponse(response);
   },
 
   update: async (id, description) => {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ description })
     });
-    return handleResponse(response);
   },
 
   delete: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/posts/${id}`, {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   }
 };
 
-// Users API
 export const usersAPI = {
   search: async (query) => {
-    const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`, {
+    return fetchWithAuth(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   getById: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+    return fetchWithAuth(`${API_BASE_URL}/users/${id}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   }
 };
 
-// Chat API
 export const chatAPI = {
   getConversations: async () => {
-    const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+    return fetchWithAuth(`${API_BASE_URL}/chat/conversations`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   getMessages: async (userId, before = null) => {
     let url = `${API_BASE_URL}/chat/messages/${userId}`;
     if (before) url += `?before=${encodeURIComponent(before)}`;
-    const response = await fetch(url, {
+    return fetchWithAuth(url, {
       method: 'GET',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   markAsRead: async (senderId) => {
-    const response = await fetch(`${API_BASE_URL}/chat/read/${senderId}`, {
+    return fetchWithAuth(`${API_BASE_URL}/chat/read/${senderId}`, {
       method: 'PUT',
       headers: getAuthHeaders()
     });
-    return handleResponse(response);
   }
 };
 
-// Profile API
 export const profileAPI = {
   getMe: async () => {
-    const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/profile/me`, {
+    return fetchWithAuth(`${API_BASE_URL}/profile/me`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      }
+      headers: getAuthHeaders()
     });
-    return handleResponse(response);
   },
 
   updatePhoto: async (file) => {
@@ -215,14 +259,12 @@ export const profileAPI = {
     formData.append('profilePhoto', file);
 
     const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/profile/photo`, {
+    return fetchWithAuth(`${API_BASE_URL}/profile/photo`, {
       method: 'PUT',
       headers: {
         ...(token && { 'Authorization': `Bearer ${token}` })
-        // Don't set Content-Type, let browser set it with boundary for FormData
       },
       body: formData
     });
-    return handleResponse(response);
   }
 };

@@ -1,24 +1,44 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Use environment variable for JWT secret, throw error if not set in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const REFRESH_SECRET = JWT_SECRET + '-refresh';
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
   throw new Error('JWT_SECRET environment variable is required in production');
 }
 
-// Generate JWT token (moved here for consistency)
+// Short-lived access token (15 minutes)
 const generateToken = (userId) => {
   return jwt.sign(
     { userId: userId.toString() },
     JWT_SECRET,
     { 
+      expiresIn: '15m',
+      issuer: 'travelblog-api',
+      audience: 'travelblog-client'
+    }
+  );
+};
+
+// Long-lived refresh token (7 days), includes tokenVersion for revocation
+const generateRefreshToken = (userId, tokenVersion) => {
+  return jwt.sign(
+    { userId: userId.toString(), tokenVersion, type: 'refresh' },
+    REFRESH_SECRET,
+    {
       expiresIn: '7d',
       issuer: 'travelblog-api',
       audience: 'travelblog-client'
     }
   );
+};
+
+const verifyRefreshToken = (token) => {
+  return jwt.verify(token, REFRESH_SECRET, {
+    issuer: 'travelblog-api',
+    audience: 'travelblog-client'
+  });
 };
 
 // Middleware to verify JWT token
@@ -82,4 +102,4 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateToken, JWT_SECRET, generateToken };
+module.exports = { authenticateToken, JWT_SECRET, generateToken, generateRefreshToken, verifyRefreshToken };

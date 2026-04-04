@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, generateRefreshToken, verifyRefreshToken } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -42,12 +42,13 @@ router.post('/register', [
     const user = new User({ username: trimmedUsername, password });
     await user.save();
 
-    // Generate token with user ID as string
     const token = generateToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString(), user.tokenVersion);
 
     res.status(201).json({
       message: 'User registered successfully',
       token,
+      refreshToken,
       user: {
         id: user._id.toString(),
         username: user.username,
@@ -136,12 +137,13 @@ router.post('/login', [
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
-    // Generate token with user ID as string
     const token = generateToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString(), user.tokenVersion);
 
     res.json({
       message: 'Login successful',
       token,
+      refreshToken,
       user: {
         id: user._id.toString(),
         username: user.username,
@@ -167,6 +169,71 @@ router.post('/login', [
     res.status(500).json({
       message: 'Server error during login'
     });
+  }
+});
+
+// Refresh access token using a valid refresh token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Refresh token expired' });
+      }
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    if (decoded.type !== 'refresh') {
+      return res.status(401).json({ message: 'Invalid token type' });
+    }
+
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    if (decoded.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({ message: 'Token has been revoked' });
+    }
+
+    const token = generateToken(user._id.toString());
+    res.json({ token });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ message: 'Error refreshing token' });
+  }
+});
+
+// Logout — increments tokenVersion to revoke all refresh tokens
+router.post('/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.json({ message: 'Logged out' });
+    }
+
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch {
+      return res.json({ message: 'Logged out' });
+    }
+
+    if (decoded.type === 'refresh' && decoded.userId) {
+      await User.findByIdAndUpdate(decoded.userId, { $inc: { tokenVersion: 1 } });
+    }
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.json({ message: 'Logged out' });
   }
 });
 

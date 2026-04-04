@@ -31,5 +31,6 @@ const blogPostSchema = new mongoose.Schema({
 
 // Index for efficient querying
 blogPostSchema.index({ authorId: 1, createdAt: -1 });
+blogPostSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('BlogPost', blogPostSchema);

@@ -1,28 +1,10 @@
 import React from 'react';
+import { getMediaUrl } from '../utils/api';
 import './BlogPost.css';
 
 function BlogPost({ blog, onDelete, showDelete, onClick, className = '' }) {
-  const getMediaUrl = () => {
-    let mediaUrl = blog.mediaUrl;
-    if (!mediaUrl) return null;
-
-    // Handle blob URLs (from localStorage/preview)
-    if (mediaUrl.startsWith('blob:')) {
-      return mediaUrl;
-    }
-
-    // Handle relative paths from backend
-    if (mediaUrl.startsWith('/uploads')) {
-      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      return `${apiBase}${mediaUrl}`;
-    }
-
-    // Handle absolute URLs
-    return mediaUrl;
-  };
-
   const renderMedia = () => {
-    const mediaUrl = getMediaUrl();
+    const mediaUrl = getMediaUrl(blog.mediaUrl);
 
     if (blog.mediaType === 'image' && mediaUrl) {
       return <img src={mediaUrl} alt={blog.description || 'Travel photo'} className="blog-media" />;

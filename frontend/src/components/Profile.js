@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BlogPost from './BlogPost';
 import PostExpandedOverlay from './PostExpandedOverlay';
-import { postsAPI, profileAPI } from '../utils/api';
+import { postsAPI, profileAPI, getMediaUrl } from '../utils/api';
 import './Profile.css';
 
 function Profile({ user, onUserUpdate }) {
@@ -36,8 +36,7 @@ function Profile({ user, onUserUpdate }) {
       const response = await profileAPI.getMe();
       setProfileData(response.user);
       if (response.user.profilePhoto) {
-        const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        setPhotoPreview(`${apiBase}${response.user.profilePhoto}`);
+        setPhotoPreview(getMediaUrl(response.user.profilePhoto));
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
@@ -111,8 +110,7 @@ function Profile({ user, onUserUpdate }) {
       setProfileData(response.user);
       
       // Update preview with new URL
-      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      setPhotoPreview(`${apiBase}${response.user.profilePhoto}`);
+      setPhotoPreview(getMediaUrl(response.user.profilePhoto));
       
       // Update user in parent component
       if (onUserUpdate) {
@@ -127,8 +125,7 @@ function Profile({ user, onUserUpdate }) {
       setPhotoError(err.message || 'Failed to update profile photo. Please try again.');
       // Reset preview on error
       if (profileData?.profilePhoto) {
-        const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-        setPhotoPreview(`${apiBase}${profileData.profilePhoto}`);
+        setPhotoPreview(getMediaUrl(profileData.profilePhoto));
       } else {
         setPhotoPreview(null);
       }
@@ -138,14 +135,8 @@ function Profile({ user, onUserUpdate }) {
   };
 
   const getPhotoUrl = () => {
-    if (photoPreview) {
-      return photoPreview;
-    }
-    if (profileData?.profilePhoto) {
-      const apiBase = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-      return `${apiBase}${profileData.profilePhoto}`;
-    }
-    return null;
+    if (photoPreview) return photoPreview;
+    return getMediaUrl(profileData?.profilePhoto);
   };
 
   return (

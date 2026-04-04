@@ -52,17 +52,32 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// Get all blog posts (public feed)
+// Get all blog posts (public feed, paginated)
 router.get('/', async (req, res) => {
   try {
-    const posts = await BlogPost.find()
-      .sort({ createdAt: -1 })
-      .populate('authorId', 'username')
-      .select('-authorId.password');
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+    const skip = (page - 1) * limit;
+
+    const [posts, totalPosts] = await Promise.all([
+      BlogPost.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('authorId', 'username')
+        .select('-authorId.password'),
+      BlogPost.countDocuments()
+    ]);
+
+    const totalPages = Math.ceil(totalPosts / limit);
 
     res.json({
       message: 'Blog posts retrieved successfully',
-      posts
+      posts,
+      page,
+      totalPages,
+      totalPosts,
+      hasMore: page < totalPages
     });
   } catch (error) {
     console.error('Error fetching posts:', error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { chatAPI, usersAPI } from '../utils/api';
+import { chatAPI, usersAPI, getMediaUrl } from '../utils/api';
 import { connectSocket, getSocket, disconnectSocket } from '../utils/socket';
 import './Chat.css';
 
@@ -21,8 +21,6 @@ function Chat({ user }) {
   const typingTimeoutRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const socketRef = useRef(null);
-
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -211,11 +209,7 @@ function Chat({ user }) {
 
   const isOnline = (userId) => onlineUsers.includes(userId);
 
-  const getPhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (photo.startsWith('http')) return photo;
-    return `${API_BASE}${photo}`;
-  };
+  const getPhotoUrl = (photo) => getMediaUrl(photo);
 
   return (
     <div className="chat-container">
