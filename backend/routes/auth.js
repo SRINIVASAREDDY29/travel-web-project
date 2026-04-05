@@ -52,7 +52,10 @@ router.post('/register', [
       user: {
         id: user._id.toString(),
         username: user.username,
-        profilePhoto: user.profilePhoto || null
+        profilePhoto: user.profilePhoto || null,
+        fullName: user.fullName || '',
+        bio: user.bio || '',
+        location: user.location || ''
       }
     });
   } catch (error) {
@@ -147,7 +150,10 @@ router.post('/login', [
       user: {
         id: user._id.toString(),
         username: user.username,
-        profilePhoto: user.profilePhoto || null
+        profilePhoto: user.profilePhoto || null,
+        fullName: user.fullName || '',
+        bio: user.bio || '',
+        location: user.location || ''
       }
     });
   } catch (error) {

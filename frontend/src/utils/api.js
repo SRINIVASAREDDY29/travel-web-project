@@ -143,8 +143,11 @@ export const authAPI = {
 };
 
 export const postsAPI = {
-  getAll: async (page = 1, limit = 12) => {
-    return fetchWithAuth(`${API_BASE_URL}/posts?page=${page}&limit=${limit}`, {
+  getAll: async (page = 1, limit = 12, filters = {}) => {
+    let url = `${API_BASE_URL}/posts?page=${page}&limit=${limit}`;
+    if (filters.category) url += `&category=${encodeURIComponent(filters.category)}`;
+    if (filters.community) url += `&community=${encodeURIComponent(filters.community)}`;
+    return fetchWithAuth(url, {
       method: 'GET',
       headers: getAuthHeaders()
     });
@@ -171,13 +174,14 @@ export const postsAPI = {
     });
   },
 
-  create: async (file, mediaType, description) => {
+  create: async (file, mediaType, description, { title, category, community } = {}) => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('mediaType', mediaType);
-    if (description) {
-      formData.append('description', description);
-    }
+    if (description) formData.append('description', description);
+    if (title) formData.append('title', title);
+    if (category) formData.append('category', category);
+    if (community) formData.append('community', community);
 
     const token = getToken();
     return fetchWithAuth(`${API_BASE_URL}/posts`, {
@@ -186,6 +190,35 @@ export const postsAPI = {
         ...(token && { 'Authorization': `Bearer ${token}` })
       },
       body: formData
+    });
+  },
+
+  toggleLike: async (postId) => {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${postId}/like`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+  },
+
+  getComments: async (postId, page = 1) => {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${postId}/comments?page=${page}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+  },
+
+  addComment: async (postId, text) => {
+    return fetchWithAuth(`${API_BASE_URL}/posts/${postId}/comments`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ text })
+    });
+  },
+
+  deleteComment: async (commentId) => {
+    return fetchWithAuth(`${API_BASE_URL}/posts/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
     });
   },
 
@@ -246,11 +279,66 @@ export const chatAPI = {
   }
 };
 
+export const communitiesAPI = {
+  getAll: async (query = '', category = '') => {
+    let url = `${API_BASE_URL}/communities?`;
+    if (query) url += `q=${encodeURIComponent(query)}&`;
+    if (category) url += `category=${encodeURIComponent(category)}`;
+    return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders() });
+  },
+
+  getById: async (id) => {
+    return fetchWithAuth(`${API_BASE_URL}/communities/${id}`, {
+      method: 'GET', headers: getAuthHeaders()
+    });
+  },
+
+  getPosts: async (id, page = 1, category = '') => {
+    let url = `${API_BASE_URL}/communities/${id}/posts?page=${page}`;
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    return fetchWithAuth(url, { method: 'GET', headers: getAuthHeaders() });
+  },
+
+  create: async (name, description, category) => {
+    return fetchWithAuth(`${API_BASE_URL}/communities`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ name, description, category })
+    });
+  },
+
+  join: async (id) => {
+    return fetchWithAuth(`${API_BASE_URL}/communities/${id}/join`, {
+      method: 'POST', headers: getAuthHeaders()
+    });
+  },
+
+  leave: async (id) => {
+    return fetchWithAuth(`${API_BASE_URL}/communities/${id}/leave`, {
+      method: 'POST', headers: getAuthHeaders()
+    });
+  },
+
+  delete: async (id) => {
+    return fetchWithAuth(`${API_BASE_URL}/communities/${id}`, {
+      method: 'DELETE', headers: getAuthHeaders()
+    });
+  }
+};
+
 export const profileAPI = {
   getMe: async () => {
     return fetchWithAuth(`${API_BASE_URL}/profile/me`, {
       method: 'GET',
       headers: getAuthHeaders()
+    });
+  },
+
+  updateProfile: async (data) => {
+    return fetchWithAuth(`${API_BASE_URL}/profile/me`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data)
     });
   },
 

@@ -23,7 +23,7 @@ router.get('/search', authenticateToken, async (req, res) => {
       _id: { $ne: req.user._id },
       username: { $regex: sanitized, $options: 'i' }
     })
-      .select('username profilePhoto')
+      .select('username profilePhoto fullName bio location')
       .limit(20);
 
     res.json({ users });
@@ -39,7 +39,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    const user = await User.findById(req.params.id).select('username profilePhoto');
+    const user = await User.findById(req.params.id)
+      .select('username profilePhoto fullName bio location communities createdAt')
+      .populate('communities', 'name image');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });

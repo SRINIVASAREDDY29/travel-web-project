@@ -11,7 +11,9 @@ const router = express.Router();
 // Get current user profile
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    const user = await User.findById(req.user._id)
+      .select('-password -tokenVersion')
+      .populate('communities', 'name image');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -23,6 +25,10 @@ router.get('/me', authenticateToken, async (req, res) => {
         id: user._id.toString(),
         username: user.username,
         profilePhoto: user.profilePhoto,
+        fullName: user.fullName || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        communities: user.communities || [],
         createdAt: user.createdAt
       }
     });
@@ -31,6 +37,53 @@ router.get('/me', authenticateToken, async (req, res) => {
     res.status(500).json({ 
       message: 'Error fetching profile'
     });
+  }
+});
+
+// Update profile info
+router.put('/me', authenticateToken, async (req, res) => {
+  try {
+    const { fullName, bio, location } = req.body;
+    const updates = {};
+
+    if (fullName !== undefined) {
+      if (fullName.length > 60) return res.status(400).json({ message: 'Full name cannot exceed 60 characters' });
+      updates.fullName = fullName.trim();
+    }
+    if (bio !== undefined) {
+      if (bio.length > 300) return res.status(400).json({ message: 'Bio cannot exceed 300 characters' });
+      updates.bio = bio.trim();
+    }
+    if (location !== undefined) {
+      if (location.length > 100) return res.status(400).json({ message: 'Location cannot exceed 100 characters' });
+      updates.location = location.trim();
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password -tokenVersion');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        profilePhoto: user.profilePhoto,
+        fullName: user.fullName || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
   }
 });
 

@@ -14,7 +14,7 @@ function Navbar({ isAuthenticated, user, onLogout, theme, onToggleTheme }) {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-logo">
-          <h2>TravelBlog</h2>
+          <h2>CampusConnect</h2>
         </Link>
         <div className="navbar-menu">
           <button 
@@ -23,15 +23,16 @@ function Navbar({ isAuthenticated, user, onLogout, theme, onToggleTheme }) {
             aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
             title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? '\u{1F319}' : '\u{2600}\u{FE0F}'}
           </button>
           {isAuthenticated ? (
             <>
-              <Link to="/" className="navbar-link">Home</Link>
+              <Link to="/" className="navbar-link">Feed</Link>
+              <Link to="/communities" className="navbar-link">Communities</Link>
               <Link to="/chat" className="navbar-link">Chat</Link>
-              <Link to="/profile" className="navbar-link">My Profile</Link>
-              <Link to="/upload" className="navbar-link">Upload</Link>
-              <span className="navbar-user">Welcome, {user?.username || 'User'}</span>
+              <Link to="/profile" className="navbar-link">Profile</Link>
+              <Link to="/upload" className="navbar-link">Post</Link>
+              <span className="navbar-user">{user?.username || 'User'}</span>
               <button onClick={handleLogout} className="navbar-button">Logout</button>
             </>
           ) : (
@@ -44,4 +45,3 @@ function Navbar({ isAuthenticated, user, onLogout, theme, onToggleTheme }) {
 }
 
 export default Navbar;
-

@@ -73,8 +73,8 @@ function Login({ onLogin }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h2>{isRegistering ? 'Register' : 'Login'} to TravelBlog</h2>
-        <p className="login-subtitle">Share your travel adventures with the world</p>
+        <h2>{isRegistering ? 'Register' : 'Login'} to CampusConnect</h2>
+        <p className="login-subtitle">Connect with your campus community</p>
         
         {error && <div className="error-message">{error}</div>}
         

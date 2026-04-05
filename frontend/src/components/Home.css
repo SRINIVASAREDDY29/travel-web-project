@@ -24,6 +24,37 @@
   transition: color 0.3s ease;
 }
 
+.home-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.home-filter-chip {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 2px solid var(--border-color);
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.home-filter-chip:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.home-filter-chip.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;

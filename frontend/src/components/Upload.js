@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { postsAPI } from '../utils/api';
+import { postsAPI, communitiesAPI } from '../utils/api';
 import './Upload.css';
 
 function Upload({ user }) {
@@ -8,14 +8,22 @@ function Upload({ user }) {
     mediaType: 'image',
     file: null,
     description: '',
-    preview: null
+    preview: null,
+    title: '',
+    category: 'general',
+    community: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [myCommunities, setMyCommunities] = useState([]);
   const navigate = useNavigate();
 
-  // Cleanup preview URL on unmount or when preview changes
+  useEffect(() => {
+    fetchMyCommunities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     return () => {
       if (formData.preview && formData.preview.startsWith('blob:')) {
@@ -24,16 +32,27 @@ function Upload({ user }) {
     };
   }, [formData.preview]);
 
+  const fetchMyCommunities = async () => {
+    try {
+      const data = await communitiesAPI.getAll();
+      const joined = (data.communities || []).filter(c =>
+        c.members?.some(m => {
+          const mid = typeof m === 'object' ? (m._id || m) : m;
+          return mid === user?.id || mid?.toString?.() === user?.id;
+        })
+      );
+      setMyCommunities(joined);
+    } catch {
+      // Non-critical
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Clean up previous preview URL if exists
-    if (formData.preview) {
-      URL.revokeObjectURL(formData.preview);
-    }
+    if (formData.preview) URL.revokeObjectURL(formData.preview);
 
-    // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
 
@@ -42,41 +61,33 @@ function Upload({ user }) {
       return;
     }
 
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
       setError('File size must be less than 50MB');
       return;
     }
 
-    setFormData({
-      ...formData,
-      file: file,
+    setFormData(f => ({
+      ...f,
+      file,
       mediaType: isImage ? 'image' : 'video',
       preview: URL.createObjectURL(file)
-    });
+    }));
     setError('');
   };
 
-  const handleDescriptionChange = (e) => {
-    setFormData({
-      ...formData,
-      description: e.target.value
-    });
+  const handleChange = (field) => (e) => {
+    setFormData(f => ({ ...f, [field]: e.target.value }));
   };
 
   const handleMediaTypeChange = (e) => {
-    // Clean up preview URL if exists
-    if (formData.preview) {
-      URL.revokeObjectURL(formData.preview);
-    }
-    
-    setFormData({
-      ...formData,
+    if (formData.preview) URL.revokeObjectURL(formData.preview);
+    setFormData(f => ({
+      ...f,
       mediaType: e.target.value,
       file: null,
       preview: null
-    });
+    }));
     setError('');
   };
 
@@ -94,27 +105,29 @@ function Upload({ user }) {
 
     try {
       const description = formData.description.trim() || undefined;
-      await postsAPI.create(formData.file, formData.mediaType, description);
+      await postsAPI.create(formData.file, formData.mediaType, description, {
+        title: formData.title.trim() || undefined,
+        category: formData.category,
+        community: formData.community || undefined
+      });
 
-      setSuccess('Blog post uploaded successfully!');
-      
-      // Reset form
+      setSuccess('Post uploaded successfully!');
+
       setFormData({
         mediaType: 'image',
         file: null,
         description: '',
-        preview: null
+        preview: null,
+        title: '',
+        category: 'general',
+        community: ''
       });
 
-      // Clear file input
       e.target.reset();
 
-      // Redirect to home after 1.5 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      setTimeout(() => navigate('/'), 1500);
     } catch (err) {
-      setError(err.message || 'Failed to upload blog post. Please try again.');
+      setError(err.message || 'Failed to upload. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -123,18 +136,62 @@ function Upload({ user }) {
   return (
     <div className="upload-container">
       <div className="upload-card">
-        <h2>Share Your Travel Adventure</h2>
-        <p className="upload-subtitle">Upload photos or videos from your travels</p>
+        <h2>Create a Post</h2>
+        <p className="upload-subtitle">Share updates, events, or items with your community</p>
 
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
 
         <form onSubmit={handleSubmit} className="upload-form">
           <div className="form-group">
+            <label htmlFor="title">Title (Optional)</label>
+            <input
+              type="text"
+              id="title"
+              value={formData.title}
+              onChange={handleChange('title')}
+              placeholder="Give your post a title..."
+              maxLength={150}
+              className="form-input"
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="category">Category</label>
+              <select
+                id="category"
+                value={formData.category}
+                onChange={handleChange('category')}
+                className="form-select"
+              >
+                <option value="general">General</option>
+                <option value="event">Event</option>
+                <option value="marketplace">Marketplace</option>
+                <option value="alert">Alert</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="community">Community (Optional)</label>
+              <select
+                id="community"
+                value={formData.community}
+                onChange={handleChange('community')}
+                className="form-select"
+              >
+                <option value="">Public / No Community</option>
+                {myCommunities.map(c => (
+                  <option key={c._id} value={c._id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
             <label htmlFor="mediaType">Media Type</label>
             <select
               id="mediaType"
-              name="mediaType"
               value={formData.mediaType}
               onChange={handleMediaTypeChange}
               className="form-select"
@@ -151,7 +208,6 @@ function Upload({ user }) {
             <input
               type="file"
               id="file"
-              name="file"
               accept={formData.mediaType === 'image' ? 'image/*' : 'video/*'}
               onChange={handleFileChange}
               className="file-input"
@@ -172,17 +228,17 @@ function Upload({ user }) {
             <label htmlFor="description">Description (Optional)</label>
             <textarea
               id="description"
-              name="description"
               value={formData.description}
-              onChange={handleDescriptionChange}
-              placeholder="Tell us about your travel experience..."
-              rows="5"
+              onChange={handleChange('description')}
+              placeholder="What's on your mind?"
+              rows="4"
               className="form-textarea"
+              maxLength={2000}
             />
           </div>
 
           <button type="submit" className="upload-button" disabled={loading}>
-            {loading ? 'Uploading...' : 'Upload Blog Post'}
+            {loading ? 'Uploading...' : 'Post'}
           </button>
         </form>
       </div>
@@ -191,4 +247,3 @@ function Upload({ user }) {
 }
 
 export default Upload;
-

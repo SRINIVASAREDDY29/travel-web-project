@@ -11,6 +11,12 @@ const blogPostSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  title: {
+    type: String,
+    trim: true,
+    maxlength: [150, 'Title cannot exceed 150 characters'],
+    default: ''
+  },
   mediaType: {
     type: String,
     required: true,
@@ -23,14 +29,29 @@ const blogPostSchema = new mongoose.Schema({
   description: {
     type: String,
     trim: true,
-    maxlength: [1000, 'Description cannot exceed 1000 characters']
-  }
+    maxlength: [2000, 'Description cannot exceed 2000 characters']
+  },
+  category: {
+    type: String,
+    enum: ['general', 'event', 'marketplace', 'alert'],
+    default: 'general'
+  },
+  community: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Community',
+    default: null
+  },
+  likes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });
 
-// Index for efficient querying
 blogPostSchema.index({ authorId: 1, createdAt: -1 });
 blogPostSchema.index({ createdAt: -1 });
+blogPostSchema.index({ community: 1, createdAt: -1 });
+blogPostSchema.index({ category: 1, createdAt: -1 });
 
 module.exports = mongoose.model('BlogPost', blogPostSchema);

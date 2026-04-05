@@ -97,7 +97,7 @@ mongoose.connection.on('error', (err) => {
 // Root route
 app.get('/', (req, res) => {
   res.json({
-    message: 'TravelBlog API Server',
+    message: 'CampusConnect API Server',
     status: 'Running',
     endpoints: {
       health: '/api/health',
@@ -122,6 +122,7 @@ app.use('/api/posts', require('./routes/posts'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/chat', require('./routes/chat'));
+app.use('/api/communities', require('./routes/communities'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

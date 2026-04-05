@@ -19,6 +19,28 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  fullName: {
+    type: String,
+    trim: true,
+    maxlength: [60, 'Full name cannot exceed 60 characters'],
+    default: ''
+  },
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'Bio cannot exceed 300 characters'],
+    default: ''
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Location cannot exceed 100 characters'],
+    default: ''
+  },
+  communities: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Community'
+  }],
   tokenVersion: {
     type: Number,
     default: 0

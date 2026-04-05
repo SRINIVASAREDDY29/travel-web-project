@@ -2,7 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import BlogPost from './BlogPost';
 import './PostExpandedOverlay.css';
 
-function PostExpandedOverlay({ post, onClose }) {
+function PostExpandedOverlay({ post, onClose, currentUserId }) {
   const handleEscape = useCallback(
     (e) => {
       if (e.key === 'Escape') onClose();
@@ -41,9 +41,9 @@ function PostExpandedOverlay({ post, onClose }) {
           onClick={onClose}
           aria-label="Close"
         >
-          ×
+          &times;
         </button>
-        <BlogPost blog={post} className="expanded" />
+        <BlogPost blog={post} className="expanded" currentUserId={currentUserId} />
       </div>
     </div>
   );

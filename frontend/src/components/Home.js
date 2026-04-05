@@ -4,6 +4,14 @@ import PostExpandedOverlay from './PostExpandedOverlay';
 import { postsAPI } from '../utils/api';
 import './Home.css';
 
+const CATEGORIES = [
+  { value: '', label: 'All' },
+  { value: 'general', label: 'General' },
+  { value: 'event', label: 'Events' },
+  { value: 'marketplace', label: 'Marketplace' },
+  { value: 'alert', label: 'Alerts' }
+];
+
 function Home({ user, isAuthenticated }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +20,7 @@ function Home({ user, isAuthenticated }) {
   const [expandedPost, setExpandedPost] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [category, setCategory] = useState('');
 
   const fetchBlogs = useCallback(async (pageNum = 1, append = false) => {
     try {
@@ -22,7 +31,10 @@ function Home({ user, isAuthenticated }) {
         setError('');
       }
 
-      const response = await postsAPI.getAll(pageNum);
+      const filters = {};
+      if (category) filters.category = category;
+
+      const response = await postsAPI.getAll(pageNum, 12, filters);
 
       if (append) {
         setBlogs(prev => [...prev, ...(response.posts || [])]);
@@ -34,14 +46,14 @@ function Home({ user, isAuthenticated }) {
       setHasMore(response.hasMore || false);
     } catch (err) {
       if (!append) {
-        setError(err.message || 'Failed to load blog posts. Please try again later.');
+        setError(err.message || 'Failed to load posts.');
       }
-      console.error('Error fetching blogs:', err);
+      console.error('Error fetching posts:', err);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [category]);
 
   useEffect(() => {
     fetchBlogs(1);
@@ -56,27 +68,36 @@ function Home({ user, isAuthenticated }) {
   return (
     <div className="home-container">
       <div className="home-header">
-        <h1>Travel Adventures</h1>
-        <p>Discover amazing travel stories from around the world</p>
+        <h1>Community Feed</h1>
+        <p>See what's happening across your communities</p>
+      </div>
+
+      <div className="home-filters">
+        {CATEGORIES.map(c => (
+          <button
+            key={c.value}
+            className={`home-filter-chip ${category === c.value ? 'active' : ''}`}
+            onClick={() => setCategory(c.value)}
+          >
+            {c.label}
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div className="empty-state">
-          <div className="empty-icon">⏳</div>
           <h3>Loading...</h3>
         </div>
       ) : error ? (
         <div className="empty-state">
-          <div className="empty-icon">⚠️</div>
-          <h3>Error loading blogs</h3>
+          <h3>Error loading posts</h3>
           <p>{error}</p>
           <button onClick={() => fetchBlogs(1)} className="retry-button">Retry</button>
         </div>
       ) : blogs.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">✈️</div>
-          <h3>No travel blogs yet</h3>
-          <p>Be the first to share your travel adventure!</p>
+          <h3>No posts yet</h3>
+          <p>{category ? 'No posts in this category. Try a different filter!' : 'Be the first to share something!'}</p>
         </div>
       ) : (
         <>
@@ -86,6 +107,7 @@ function Home({ user, isAuthenticated }) {
                 key={blog._id || blog.id}
                 blog={blog}
                 onClick={setExpandedPost}
+                currentUserId={user?.id}
               />
             ))}
           </div>
@@ -108,6 +130,7 @@ function Home({ user, isAuthenticated }) {
         <PostExpandedOverlay
           post={expandedPost}
           onClose={() => setExpandedPost(null)}
+          currentUserId={user?.id}
         />
       )}
     </div>
@@ -115,4 +138,3 @@ function Home({ user, isAuthenticated }) {
 }
 
 export default Home;
-

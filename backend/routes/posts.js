@@ -1,7 +1,9 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const multer = require('multer');
+const mongoose = require('mongoose');
 const BlogPost = require('../models/BlogPost');
+const Comment = require('../models/Comment');
 const { authenticateToken } = require('../middleware/auth');
 const upload = require('../config/multer');
 
@@ -52,27 +54,34 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// Get all blog posts (public feed, paginated)
+// Get all posts (public feed, paginated, filterable)
 router.get('/', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
     const skip = (page - 1) * limit;
 
+    const filter = {};
+    if (req.query.category && ['general', 'event', 'marketplace', 'alert'].includes(req.query.category)) {
+      filter.category = req.query.category;
+    }
+    if (req.query.community && mongoose.Types.ObjectId.isValid(req.query.community)) {
+      filter.community = req.query.community;
+    }
+
     const [posts, totalPosts] = await Promise.all([
-      BlogPost.find()
+      BlogPost.find(filter)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('authorId', 'username')
-        .select('-authorId.password'),
-      BlogPost.countDocuments()
+        .populate('authorId', 'username profilePhoto'),
+      BlogPost.countDocuments(filter)
     ]);
 
     const totalPages = Math.ceil(totalPosts / limit);
 
     res.json({
-      message: 'Blog posts retrieved successfully',
+      message: 'Posts retrieved successfully',
       posts,
       page,
       totalPages,
@@ -82,7 +91,7 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ 
-      message: 'Error fetching blog posts'
+      message: 'Error fetching posts'
     });
   }
 });
@@ -169,11 +178,9 @@ router.post('/',
 
       uploadedFilePath = req.file.path;
 
-      const { mediaType, description } = req.body;
+      const { mediaType, description, title, category, community } = req.body;
 
-      // Validate media type
       if (!mediaType || !['image', 'video'].includes(mediaType)) {
-        // Clean up uploaded file
         const filePath = path.join(__dirname, '..', uploadedFilePath);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
@@ -181,23 +188,36 @@ router.post('/',
         return res.status(400).json({ message: 'Invalid media type. Must be "image" or "video"' });
       }
 
-      // Construct media URL
+      if (category && !['general', 'event', 'marketplace', 'alert'].includes(category)) {
+        const filePath = path.join(__dirname, '..', uploadedFilePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({ message: 'Invalid category' });
+      }
+
       const mediaPath = mediaType === 'image' ? 'images' : 'videos';
       const mediaUrl = `/uploads/${mediaPath}/${req.file.filename}`;
 
-      // Create blog post
-      const blogPost = new BlogPost({
+      const postData = {
         author: req.user.username,
         authorId: req.user._id,
         mediaType,
         mediaUrl,
-        description: description || undefined
-      });
+        description: description || undefined,
+        title: title ? title.trim() : '',
+        category: category || 'general'
+      };
 
+      if (community && mongoose.Types.ObjectId.isValid(community)) {
+        postData.community = community;
+      }
+
+      const blogPost = new BlogPost(postData);
       await blogPost.save();
 
       res.status(201).json({
-        message: 'Blog post created successfully',
+        message: 'Post created successfully',
         post: blogPost
       });
     } catch (error) {
@@ -316,6 +336,137 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ 
       message: 'Error deleting blog post'
     });
+  }
+});
+
+// Like / Unlike a post
+router.post('/:id/like', authenticateToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid post ID' });
+    }
+
+    const post = await BlogPost.findById(req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const userId = req.user._id.toString();
+    const alreadyLiked = post.likes.some(id => id.toString() === userId);
+
+    if (alreadyLiked) {
+      post.likes = post.likes.filter(id => id.toString() !== userId);
+    } else {
+      post.likes.push(req.user._id);
+    }
+
+    await post.save();
+
+    res.json({
+      liked: !alreadyLiked,
+      likesCount: post.likes.length,
+      likes: post.likes
+    });
+  } catch (error) {
+    console.error('Like error:', error);
+    res.status(500).json({ message: 'Error toggling like' });
+  }
+});
+
+// Get comments for a post
+router.get('/:id/comments', async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid post ID' });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const [comments, total] = await Promise.all([
+      Comment.find({ postId: req.params.id })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('userId', 'username profilePhoto'),
+      Comment.countDocuments({ postId: req.params.id })
+    ]);
+
+    res.json({
+      comments,
+      total,
+      hasMore: skip + limit < total
+    });
+  } catch (error) {
+    console.error('Get comments error:', error);
+    res.status(500).json({ message: 'Error fetching comments' });
+  }
+});
+
+// Add a comment to a post
+router.post('/:id/comments',
+  authenticateToken,
+  [
+    body('text')
+      .trim()
+      .notEmpty().withMessage('Comment text is required')
+      .isLength({ max: 500 }).withMessage('Comment cannot exceed 500 characters')
+  ],
+  async (req, res) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ message: 'Invalid post ID' });
+      }
+
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ message: errors.array()[0].msg });
+      }
+
+      const post = await BlogPost.findById(req.params.id);
+      if (!post) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+
+      const comment = await Comment.create({
+        postId: req.params.id,
+        userId: req.user._id,
+        text: req.body.text.trim()
+      });
+
+      const populated = await Comment.findById(comment._id)
+        .populate('userId', 'username profilePhoto');
+
+      res.status(201).json({ comment: populated });
+    } catch (error) {
+      console.error('Add comment error:', error);
+      res.status(500).json({ message: 'Error adding comment' });
+    }
+  }
+);
+
+// Delete a comment (only comment author)
+router.delete('/comments/:commentId', authenticateToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.commentId)) {
+      return res.status(400).json({ message: 'Invalid comment ID' });
+    }
+
+    const comment = await Comment.findById(req.params.commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    if (comment.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'You can only delete your own comments' });
+    }
+
+    await comment.deleteOne();
+    res.json({ message: 'Comment deleted' });
+  } catch (error) {
+    console.error('Delete comment error:', error);
+    res.status(500).json({ message: 'Error deleting comment' });
   }
 });
 

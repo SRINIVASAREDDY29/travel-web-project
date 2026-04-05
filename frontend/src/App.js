@@ -6,6 +6,9 @@ import Home from './components/Home';
 import Upload from './components/Upload';
 import Profile from './components/Profile';
 import Chat from './components/Chat';
+import Communities from './components/Communities';
+import CommunityDetail from './components/CommunityDetail';
+import CreateCommunity from './components/CreateCommunity';
 import { profileAPI, authAPI } from './utils/api';
 import './App.css';
 
@@ -66,22 +69,18 @@ function App() {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      // Don't show error to user, just use cached data
     }
   };
 
   useEffect(() => {
-    // Apply theme to document on mount and when theme changes
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
   useEffect(() => {
-    // Apply theme immediately on mount
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     
-    // Check if user is authenticated on app load
     const token = localStorage.getItem('token');
     const authStatus = localStorage.getItem('isAuthenticated');
     const userData = localStorage.getItem('user');
@@ -165,6 +164,20 @@ function App() {
                 element={
                   isAuthenticated ? <Chat user={user} /> : <Navigate to="/login" replace />
                 } 
+              />
+              <Route 
+                path="/communities" 
+                element={<Communities user={user} />} 
+              />
+              <Route 
+                path="/community/create" 
+                element={
+                  isAuthenticated ? <CreateCommunity /> : <Navigate to="/login" replace />
+                } 
+              />
+              <Route 
+                path="/community/:id" 
+                element={<CommunityDetail user={user} />} 
               />
               <Route path="/" element={<Home user={user} isAuthenticated={isAuthenticated} />} />
               <Route path="*" element={
